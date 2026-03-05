@@ -1,6 +1,6 @@
-## GDS/KLayout Chat Tools Setup
+## GDS/KLayout MCP Server Setup
 
-This fork adds built-in GDS (GDSII) layout tools powered by KLayout, enabling the LLM to create, describe, and edit GDS layouts directly in chat.
+This fork adds GDS (GDSII) layout tools via an MCP (Model Context Protocol) server powered by KLayout, enabling the LLM to create, analyze, and edit GDS layouts directly in chat.
 
 ### Prerequisites
 
@@ -8,14 +8,14 @@ This fork adds built-in GDS (GDSII) layout tools powered by KLayout, enabling th
 - **Node.js >= 18** (for frontend build)
 - **uv** (Python package manager): `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
-### 1. Open WebUI Backend (with KLayout)
+### 1. Open WebUI Backend
 
 ```bash
 # Clone and enter the repo
 git clone <repo-url> && cd open-webui
 
-# Create venv and install deps with klayout extra
-uv sync --extra klayout
+# Create venv and install deps
+uv sync
 
 # Create .envrc for direnv (optional)
 cat > .envrc << 'EOF'
@@ -36,7 +36,17 @@ npm install
 npm run dev
 ```
 
-### 3. vLLM Server (separate environment, GPU server)
+### 3. GDS/KLayout MCP Server
+
+```bash
+# Install klayout in the MCP server's environment
+uv pip install klayout
+
+# Start the MCP server (see mcp_servers/klayout_gds/ for details)
+# Then add it in Open WebUI: Admin Panel > Settings > Tools > MCP Servers
+```
+
+### 4. vLLM Server (separate environment, GPU server)
 
 The vLLM server runs in its own Python environment since vllm and Open WebUI have conflicting `transformers` versions.
 
@@ -54,14 +64,14 @@ vllm serve openai/gpt-oss-120b \
     --tool-call-parser openai
 ```
 
-### 4. Enable Native Tool Calling for Your Model
+### 5. Enable Native Tool Calling for Your Model
 
 Configure in the admin UI:
 
 1. Go to **Admin Panel > Settings > Connections** and verify your vLLM server URL is set
 2. Go to **Workspace > Models** and create a model preset for your model
 3. Set **Function Calling** to `native` in the model params
-4. Ensure **Built-in Tools** capability is enabled
+4. Add the KLayout MCP server under **Tools > MCP Servers**
 
 ---
 
