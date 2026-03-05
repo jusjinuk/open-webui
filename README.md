@@ -1,3 +1,70 @@
+## GDS/KLayout Chat Tools Setup
+
+This fork adds built-in GDS (GDSII) layout tools powered by KLayout, enabling the LLM to create, describe, and edit GDS layouts directly in chat.
+
+### Prerequisites
+
+- **Python 3.11–3.12**
+- **Node.js >= 18** (for frontend build)
+- **uv** (Python package manager): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+
+### 1. Open WebUI Backend (with KLayout)
+
+```bash
+# Clone and enter the repo
+git clone <repo-url> && cd open-webui
+
+# Create venv and install deps with klayout extra
+uv sync --extra klayout
+
+# Create .envrc for direnv (optional)
+cat > .envrc << 'EOF'
+source .venv/bin/activate
+export OPENAI_API_KEY="your-api-key"
+export OPENAI_API_BASE_URL="http://your-vllm-server:8000/v1"
+EOF
+direnv allow
+
+# Start backend
+cd backend && bash dev.sh
+```
+
+### 2. Frontend
+
+```bash
+npm install
+npm run dev
+```
+
+### 3. vLLM Server (separate environment, GPU server)
+
+The vLLM server runs in its own Python environment since vllm and Open WebUI have conflicting `transformers` versions.
+
+```bash
+# Create a separate venv for vLLM
+uv venv --python 3.11 .venv-vllm
+source .venv-vllm/bin/activate
+uv pip install vllm==0.16.0
+
+# Serve the model (example config)
+vllm serve openai/gpt-oss-120b \
+    --config gpt-oss-120b.yaml \
+    --api-key $OPENAI_API_KEY \
+    --enable-auto-tool-choice \
+    --tool-call-parser openai
+```
+
+### 4. Enable Native Tool Calling for Your Model
+
+Configure in the admin UI:
+
+1. Go to **Admin Panel > Settings > Connections** and verify your vLLM server URL is set
+2. Go to **Workspace > Models** and create a model preset for your model
+3. Set **Function Calling** to `native` in the model params
+4. Ensure **Built-in Tools** capability is enabled
+
+---
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
