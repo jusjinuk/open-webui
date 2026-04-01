@@ -1,3 +1,80 @@
+## GDS/KLayout MCP Server Setup
+
+This fork adds GDS (GDSII) layout tools via an MCP (Model Context Protocol) server powered by KLayout, enabling the LLM to create, analyze, and edit GDS layouts directly in chat.
+
+### Prerequisites
+
+- **Python 3.11–3.12**
+- **Node.js >= 18** (for frontend build)
+- **uv** (Python package manager): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+
+### 1. Open WebUI Backend
+
+```bash
+# Clone and enter the repo
+git clone <repo-url> && cd open-webui
+
+# Create venv and install deps
+uv sync
+
+# Create .envrc for direnv (optional)
+cat > .envrc << 'EOF'
+source .venv/bin/activate
+export OPENAI_API_KEY="your-api-key"
+export OPENAI_API_BASE_URL="http://your-vllm-server:8000/v1"
+EOF
+direnv allow
+
+# Start backend
+cd backend && bash dev.sh
+```
+
+### 2. Frontend
+
+```bash
+npm install
+npm run dev
+```
+
+### 3. GDS/KLayout MCP Server
+
+```bash
+# Install klayout in the MCP server's environment
+uv pip install klayout
+
+# Start the MCP server (see mcp_servers/klayout_gds/ for details)
+# Then add it in Open WebUI: Admin Panel > Settings > Tools > MCP Servers
+```
+
+### 4. vLLM Server (separate environment, GPU server)
+
+The vLLM server runs in its own Python environment since vllm and Open WebUI have conflicting `transformers` versions.
+
+```bash
+# Create a separate venv for vLLM
+uv venv --python 3.11 .venv-vllm
+source .venv-vllm/bin/activate
+uv pip install vllm==0.16.0
+
+# Serve the model (example config)
+vllm serve openai/gpt-oss-120b \
+    --config gpt-oss-120b.yaml \
+    --api-key $OPENAI_API_KEY \
+    --enable-auto-tool-choice \
+    --tool-call-parser openai
+```
+
+### 5. Enable Native Tool Calling for Your Model
+
+Configure in the admin UI:
+
+1. Go to **Admin Panel > Settings > Connections** and verify your vLLM server URL is set
+2. Go to **Workspace > Models** and create a model preset for your model
+3. Set **Function Calling** to `native` in the model params
+4. Add the KLayout MCP server under **Tools > MCP Servers**
+
+---
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
